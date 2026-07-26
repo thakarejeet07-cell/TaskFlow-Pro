@@ -53,4 +53,34 @@ const card2 = createCard("Write blog post", "About JS event loop");
 addCardToList(todoList,card1);
 addCardToList(todoList,card2);
 
-console.log(board);
+// console.log(board);
+
+function renderBoard(board){
+    const boardE1 = document.getElementById("board");
+    boardEl.innerHTML = "";
+    board.lists.forEach(list => {
+        const listDiv = document.createElement("div");
+        listDiv.classList.add("list");
+
+        const heading = document.createElement("h3");
+        heading.textContent = list.name;
+        listDiv.appendChild(heading);
+
+        list.cards.forEach(card => {
+            const cardE1 = document.createElement("div");
+            cardE1.classList.add(card);
+            cardE1.textContent = card.title;
+            cardE1.appendChild(cardE1);
+
+
+    });
+    boardEl.appendChild(listDiv);
+    });
+}
+
+renderBoard(board);
+
+
+
+
+
