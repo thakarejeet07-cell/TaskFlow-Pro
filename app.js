@@ -83,6 +83,15 @@ function renderBoard(board){
             cardEl.classList.add("card");
             cardEl.textContent = card.title;
             listDiv.appendChild(cardEl);
+
+            const deleteButton = document.createElement("button");
+            deleteButton.innerHTML = "x"   
+            deleteButton.addEventListener("click",()=>{
+                removeCardFromList(list,card.id);
+                saveBoard(board);
+                renderBoard(board);
+            }); 
+            cardEl.appendChild(deleteButton);        
         });
 
     const addButton = document.createElement("button")
@@ -97,19 +106,38 @@ function renderBoard(board){
         saveBoard(board);
         renderBoard(board);
     });
+
     listDiv.appendChild(addButton);
-    boardEl.appendChild(listDiv)
+    boardEl.appendChild(listDiv);
     });
+    const addList = document.createElement("button");
+    addList.innerHTML = "+ Add List"
+
+    addList.addEventListener("click",() => {
+        const name =  prompt("Enter list name");
+        if(!name) return;
+
+        const newList = createList(name);
+        addListToBoard(board,newList);
+        saveBoard(board);
+        renderBoard(board);        
+    });
+    boardEl.appendChild(addList);
 }
 
 function saveBoard(board){
     localStorage.setItem("taskFlow-board",JSON.stringify(board));
 }
+
 function loadBoard(){
     const data = localStorage.getItem('taskFlow-board');
     if(!data) return null;
     return JSON.parse(data);
 }
+
+function removeCardFromList(list, cardId){
+    list.cards = list.cards.filter(card => card.id !== cardId);
+} 
 
 
 renderBoard(board);
