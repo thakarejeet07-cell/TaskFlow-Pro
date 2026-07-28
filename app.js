@@ -94,6 +94,7 @@ function renderBoard(board){
             cardEl.appendChild(deleteButton);        
         });
 
+
     const addButton = document.createElement("button")
     addButton.textContent = "+ Add Card"
 
@@ -107,6 +108,15 @@ function renderBoard(board){
         renderBoard(board);
     });
 
+    const deleteList= document.createElement("button");
+    deleteList.innerHTML = "delete"   
+    deleteList.addEventListener("click",()=>{
+        removeListFromBoard(board,list.id);
+        saveBoard(board);
+        renderBoard(board);
+    });
+
+    listDiv.appendChild(deleteList);
     listDiv.appendChild(addButton);
     boardEl.appendChild(listDiv);
     });
@@ -138,6 +148,10 @@ function loadBoard(){
 function removeCardFromList(list, cardId){
     list.cards = list.cards.filter(card => card.id !== cardId);
 } 
+
+function removeListFromBoard(board, listId){
+    board.lists = board.lists.filter(list => list.id !== listId);
+}
 
 
 renderBoard(board);
