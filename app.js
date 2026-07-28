@@ -72,6 +72,27 @@ function renderBoard(board){
 
     board.lists.forEach(list => {
         const listDiv = document.createElement("div");
+
+        listDiv.addEventListener("dragover", (e) => {
+            e.preventDefault();
+        }); 
+        listDiv.addEventListener("drop", (e) => {
+        const cardId = Number(e.dataTransfer.getData("cardId"));
+        const fromListId = Number(e.dataTransfer.getData("fromListId"));
+
+        const fromList = board.lists.find(l => l.id === fromListId);
+        const card = fromList.cards.find(c => c.id === cardId);
+        
+        removeCardFromList(fromList, cardId);
+        addCardToList(list, card);
+
+        saveBoard(board);
+        renderBoard(board);        
+        
+            
+
+        });
+
         listDiv.classList.add("list");
 
         const heading = document.createElement("h3");
@@ -80,6 +101,15 @@ function renderBoard(board){
 
         list.cards.forEach(card => {
             const cardEl = document.createElement("div");
+            cardEl.draggable = true;
+            cardEl.addEventListener("dragstart" ,(e) => {
+                e.dataTransfer.setData("cardId", card.id);
+                e.dataTransfer.setData("fromListId", list.id);
+
+            });
+
+
+
             cardEl.classList.add("card");
             cardEl.textContent = card.title;
             listDiv.appendChild(cardEl);
@@ -106,6 +136,8 @@ function renderBoard(board){
             cardEl.appendChild(editBtn);            
 
         });
+
+
 
 
     const addButton = document.createElement("button")
