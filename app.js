@@ -91,7 +91,20 @@ function renderBoard(board){
                 saveBoard(board);
                 renderBoard(board);
             }); 
-            cardEl.appendChild(deleteButton);        
+            cardEl.appendChild(deleteButton);   
+            
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "Edit";
+            editBtn.addEventListener("click", () => {
+                const newTitle = prompt("Edit title", card.title);
+                if (!newTitle) return;
+
+                editCardTitle(list, card.id, newTitle);
+                saveBoard(board);
+                renderBoard(board);
+            });
+            cardEl.appendChild(editBtn);            
+
         });
 
 
@@ -153,6 +166,12 @@ function removeListFromBoard(board, listId){
     board.lists = board.lists.filter(list => list.id !== listId);
 }
 
+function editCardTitle(list,cardId,newTitle){
+    const card = list.cards.find(c => c.id == cardId);
+    if (card) {
+    card.title = newTitle;
+  }
+}
 
 renderBoard(board);
 
