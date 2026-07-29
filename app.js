@@ -37,23 +37,6 @@ function addListToBoard(board,list){
     board.lists.push(list);
 }
 
-// const board = createBoard("My Project");
-
-// const todoList = createList("To Do");
-// const doingList = createList("Doing");
-// const doneList  = createList("Done");
-
-// addListToBoard(board, todoList);
-// addListToBoard(board, doingList);
-// addListToBoard(board, doneList);
-
-// const card1 = createCard("Fix login bug", "Login button not working on Safari");
-// const card2 = createCard("Write blog post", "About JS event loop");
-
-
-// addCardToList(todoList,card1);
-// addCardToList(todoList,card2);
-
 let board = loadBoard();
 
 if(!board){
@@ -63,8 +46,28 @@ if(!board){
     addListToBoard(board, createList("Done"));
 }
 
+// ---------------- DAY 8: debounce ----------------
+function debounce(fn, delay) {
+    let timer;
+    return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            fn(...args);
+        }, delay);
+    };
+}
 
-// console.log(board);
+function searchCards(text) {
+    const lowerText = text.toLowerCase();
+    board.lists.forEach(list => {
+        list.cards.forEach(card => {
+            if (card.title.toLowerCase().includes(lowerText)) {
+                console.log("Match:", card.title, "in list:", list.name);
+            }
+        });
+    });
+}
+// ---------------------------------------------------
 
 function renderBoard(board){
     const boardEl = document.getElementById("board");
@@ -88,9 +91,6 @@ function renderBoard(board){
 
         saveBoard(board);
         renderBoard(board);        
-        
-            
-
         });
 
         listDiv.classList.add("list");
@@ -105,10 +105,7 @@ function renderBoard(board){
             cardEl.addEventListener("dragstart" ,(e) => {
                 e.dataTransfer.setData("cardId", card.id);
                 e.dataTransfer.setData("fromListId", list.id);
-
             });
-
-
 
             cardEl.classList.add("card");
             cardEl.textContent = card.title;
@@ -134,11 +131,7 @@ function renderBoard(board){
                 renderBoard(board);
             });
             cardEl.appendChild(editBtn);            
-
         });
-
-
-
 
     const addButton = document.createElement("button")
     addButton.textContent = "+ Add Card"
@@ -207,7 +200,10 @@ function editCardTitle(list,cardId,newTitle){
 
 renderBoard(board);
 
+// ---------------- DAY 8: wire up search input ----------------
+const searchInput = document.getElementById("searchInput");
+const debouncedSearch = debounce((e) => {
+    searchCards(e.target.value);
+}, 300);
 
-
-
-
+searchInput.addEventListener("input", debouncedSearch);
