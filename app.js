@@ -214,13 +214,51 @@ const debouncedSearch = debounce((e) => {
 searchInput.addEventListener("input", debouncedSearch);
 
 
-const testCard = {
-    title: "Fix login bug",
-    showTitle: function() {
-        console.log(this.title);
-    }
-};
+// const card = {
+//     title: "Fix bug",
+//     show: function() {
+//         console.log(this.title);
+//     }
+// };
+
+// ❌ WRONG — passing method directly, loses "this"
+// button.addEventListener("click", card.show);
+// when clicked, "this" is undefined → logs undefined
+
+// ✅ RIGHT — wrap in arrow function, keeps "this" pointing to card
+// button.addEventListener("click", () => card.show());
+// when clicked, card.show() is called properly → logs "Fix bug"
+
+// Method - 1
+// function Card(title, description) {
+//     this.id = generatedId();
+//     this.title = title;
+//     this.description = description;
+//     this.createdAt = Date.now();
+// }
+// Card.prototype.rename = function(newTitle) {
+//     this.title = newTitle;
+// };
+// const c1 = new Card("Fix bug", "urgent");
+// c1.rename("Fix login bug");
+// console.log(c1.title); // "Fix login bug"
 
 
-const detached = testCard.showTitle;
-detached();
+// Method - 2 
+// class CardClass {
+//     constructor(title, description) {
+//         this.id = generatedId();
+//         this.title = title;
+//         this.description = description;
+//         this.createdAt = Date.now();
+//     }
+//     rename(newTitle) {
+//         this.title = newTitle;
+//     }
+// }
+// const c2 = new CardClass("Write docs", "for API");
+// c2.rename("Write API docs");
+// console.log(c2.title);
+
+// console.log(c1.__proto__ === Card.prototype);
+// console.log(c2.__proto__ === CardClass.prototype);
