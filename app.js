@@ -46,7 +46,8 @@ if(!board){
     addListToBoard(board, createList("Done"));
 }
 
-// ---------------- DAY 8: debounce ----------------
+
+
 function debounce(fn, delay) {
     let timer;
     return function(...args) {
@@ -57,19 +58,19 @@ function debounce(fn, delay) {
     };
 }
 
-function searchCards(text) {
-    const lowerText = text.toLowerCase();
-    board.lists.forEach(list => {
-        list.cards.forEach(card => {
-            if (card.title.toLowerCase().includes(lowerText)) {
-                console.log("Match:", card.title, "in list:", list.name);
-            }
-        });
-    });
-}
-// ---------------------------------------------------
+// function searchCards(text) {
+//     const lowerText = text.toLowerCase();
+//     board.lists.forEach(list => {
+//         list.cards.forEach(card => {
+//             if (card.title.toLowerCase().includes(lowerText)) {
+//                 console.log("Match:", card.title, "in list:", list.name);
+//             }
+//         });
+//     });
+// }
 
-function renderBoard(board){
+
+function renderBoard(board, filterText = ""){
     const boardEl = document.getElementById("board");
     boardEl.innerHTML = "";
 
@@ -100,6 +101,9 @@ function renderBoard(board){
         listDiv.appendChild(heading);
 
         list.cards.forEach(card => {
+            if(filterText && !card.title.toLowerCase().includes(filterText.toLowerCase())){
+                return;
+            }
             const cardEl = document.createElement("div");
             cardEl.draggable = true;
             cardEl.addEventListener("dragstart" ,(e) => {
@@ -200,10 +204,11 @@ function editCardTitle(list,cardId,newTitle){
 
 renderBoard(board);
 
-// ---------------- DAY 8: wire up search input ----------------
+
 const searchInput = document.getElementById("searchInput");
 const debouncedSearch = debounce((e) => {
-    searchCards(e.target.value);
+    // searchCards(e.target.value);
+    renderBoard(board,e.target.value);
 }, 300);
 
 searchInput.addEventListener("input", debouncedSearch);
