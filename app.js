@@ -212,3 +212,15 @@ const debouncedSearch = debounce((e) => {
 }, 300);
 
 searchInput.addEventListener("input", debouncedSearch);
+
+
+const testCard = {
+    title: "Fix login bug",
+    showTitle: function() {
+        console.log(this.title);
+    }
+};
+
+
+const detached = testCard.showTitle;
+detached();
