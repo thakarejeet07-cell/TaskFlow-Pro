@@ -3,50 +3,68 @@ function generatedId(){
      return idCounter++;
 }
 
-
-function createCard(title, description){
-    return {
-        id: generatedId(),
-        title: title,
-        description: description,
-        createdAt: Date.now()
-    };
+class Card {
+    constructor(title, description){
+        this.id = generatedId();
+        this.title = title;
+        this.description = description;
+        this.createdAt = Date.now();        
+    }
+    rename(newTitle){
+        this.title = newTitle;
+    }
 }
 
-function createList(name){
-    return {
-        id: generatedId(),
-        name: name,
-        cards: []
-    };
+class List {
+    constructor(name){
+        this.id = generatedId();
+        this.name = name;
+        this.cards = []      
+    }
+    addCard(card) {
+        this.cards.push(card);
+    }
+    removeCard(cardId) {
+        this.cards = this.cards.filter(card => card.id !== cardId);
+    }    
 }
 
-function createBoard(name){
-    return {
-        id: generatedId(),
-        name: name,
-        lists: []
-    };
+class Board {
+    constructor(name){
+        this.id = generatedId();
+        this.name = name; 
+        this.lists = []      
+    }
+    addList(list) {
+        this.lists.push(list);
+    }
+    removeList(listId){
+        this.lists = this.lists.filter(list => list.id !== listId);
+    }
 }
 
-function addCardToList(list,card){
-    list.cards.push(card);
-}
+function reviveBoard(plainBoard) {
+    Object.setPrototypeOf(plainBoard, Board.prototype);
 
-function addListToBoard(board,list){
-    board.lists.push(list);
+    plainBoard.lists.forEach(list => {
+        Object.setPrototypeOf(list, List.prototype);
+
+        list.cards.forEach(card => {
+            Object.setPrototypeOf(card, Card.prototype);
+        });
+    });
+
+    return plainBoard;
 }
 
 let board = loadBoard();
 
 if(!board){
-    board = createBoard("My Project");
-    addListToBoard(board, createList("To Do"));
-    addListToBoard(board, createList("Doing"));
-    addListToBoard(board, createList("Done"));
+    board = new Board("My Project");
+    board.addList(new List("To Do"));
+    board.addList(new List("Doing"));
+    board.addList(new List("Done"));    
 }
-
-
 
 function debounce(fn, delay) {
     let timer;
@@ -87,8 +105,8 @@ function renderBoard(board, filterText = ""){
         const fromList = board.lists.find(l => l.id === fromListId);
         const card = fromList.cards.find(c => c.id === cardId);
         
-        removeCardFromList(fromList, cardId);
-        addCardToList(list, card);
+        fromList.removeCard(cardId);
+        list.addCard(card);
 
         saveBoard(board);
         renderBoard(board);        
@@ -118,7 +136,7 @@ function renderBoard(board, filterText = ""){
             const deleteButton = document.createElement("button");
             deleteButton.innerHTML = "x"   
             deleteButton.addEventListener("click",()=>{
-                removeCardFromList(list,card.id);
+                list.removeCard(card.id);
                 saveBoard(board);
                 renderBoard(board);
             }); 
@@ -130,7 +148,7 @@ function renderBoard(board, filterText = ""){
                 const newTitle = prompt("Edit title", card.title);
                 if (!newTitle) return;
 
-                editCardTitle(list, card.id, newTitle);
+                card.rename(newTitle);
                 saveBoard(board);
                 renderBoard(board);
             });
@@ -144,8 +162,8 @@ function renderBoard(board, filterText = ""){
         const title =  prompt("Enter card title");
         if(!title) return;
 
-        const newCard = createCard(title,"");
-        addCardToList(list,newCard);
+        const newCard = new Card(title, "");
+        list.addCard(newCard);
         saveBoard(board);
         renderBoard(board);
     });
@@ -153,7 +171,7 @@ function renderBoard(board, filterText = ""){
     const deleteList= document.createElement("button");
     deleteList.innerHTML = "delete"   
     deleteList.addEventListener("click",()=>{
-        removeListFromBoard(board,list.id);
+        board.removeList(list.id);
         saveBoard(board);
         renderBoard(board);
     });
@@ -169,8 +187,8 @@ function renderBoard(board, filterText = ""){
         const name =  prompt("Enter list name");
         if(!name) return;
 
-        const newList = createList(name);
-        addListToBoard(board,newList);
+        const newList = new List(name);
+        board.addList(newList);
         saveBoard(board);
         renderBoard(board);        
     });
@@ -184,22 +202,8 @@ function saveBoard(board){
 function loadBoard(){
     const data = localStorage.getItem('taskFlow-board');
     if(!data) return null;
-    return JSON.parse(data);
-}
-
-function removeCardFromList(list, cardId){
-    list.cards = list.cards.filter(card => card.id !== cardId);
-} 
-
-function removeListFromBoard(board, listId){
-    board.lists = board.lists.filter(list => list.id !== listId);
-}
-
-function editCardTitle(list,cardId,newTitle){
-    const card = list.cards.find(c => c.id == cardId);
-    if (card) {
-    card.title = newTitle;
-  }
+    const plainBoard = JSON.parse(data);
+    return reviveBoard(plainBoard);
 }
 
 renderBoard(board);
@@ -213,6 +217,55 @@ const debouncedSearch = debounce((e) => {
 
 searchInput.addEventListener("input", debouncedSearch);
 
+
+// const card = {
+//     title: "Fix bug",
+//     show: function() {
+//         console.log(this.title);
+//     }
+// };
+
+// ❌ WRONG — passing method directly, loses "this"
+// button.addEventListener("click", card.show);
+// when clicked, "this" is undefined → logs undefined
+
+// ✅ RIGHT — wrap in arrow function, keeps "this" pointing to card
+// button.addEventListener("click", () => card.show());
+// when clicked, card.show() is called properly → logs "Fix bug"
+
+// Method - 1
+// function Card(title, description) {
+//     this.id = generatedId();
+//     this.title = title;
+//     this.description = description;
+//     this.createdAt = Date.now();
+// }
+// Card.prototype.rename = function(newTitle) {
+//     this.title = newTitle;
+// };
+// const c1 = new Card("Fix bug", "urgent");
+// c1.rename("Fix login bug");
+// console.log(c1.title); // "Fix login bug"
+
+
+// Method - 2 
+// class CardClass {
+//     constructor(title, description) {
+//         this.id = generatedId();
+//         this.title = title;
+//         this.description = description;
+//         this.createdAt = Date.now();
+//     }
+//     rename(newTitle) {
+//         this.title = newTitle;
+//     }
+// }
+// const c2 = new CardClass("Write docs", "for API");
+// c2.rename("Write API docs");
+// console.log(c2.title);
+
+// console.log(c1.__proto__ === Card.prototype);
+// console.log(c2.__proto__ === CardClass.prototype);
 
 // const card = {
 //     title: "Fix bug",
