@@ -195,8 +195,31 @@ function renderBoard(board, filterText = ""){
     boardEl.appendChild(addList);
 }
 
-function saveBoard(board){
-    localStorage.setItem("taskFlow-board",JSON.stringify(board));
+
+function fakeServerSave(board) {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            const success = Math.random() > 0.1;
+            if (success) {
+                localStorage.setItem("taskFlow-board", JSON.stringify(board));
+                resolve("Saved successfully");
+            } else {
+                reject("Network error — save failed");
+            }
+        }, 800);
+    });
+}
+
+async function saveBoard(board) {
+    const statusEl = document.getElementById("saveStatus");
+    statusEl.textContent = "Saving...";
+
+    try {
+        const message = await fakeServerSave(board);
+        statusEl.textContent = message;
+    } catch (error) {
+        statusEl.textContent = error;
+    }
 }
 
 function loadBoard(){
