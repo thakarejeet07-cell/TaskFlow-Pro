@@ -196,9 +196,9 @@ function renderBoard(board, filterText = ""){
 }
 
 
-function fakeServerSave(board) {
+function fakeServerSave(board,signal) {
     return new Promise((resolve, reject) => {
-        setTimeout(() => {
+        const timeoutId = setTimeout(() => {
             const success = Math.random() > 0.1;
             if (success) {
                 localStorage.setItem("taskFlow-board", JSON.stringify(board));
@@ -207,10 +207,21 @@ function fakeServerSave(board) {
                 reject("Network error — save failed");
             }
         }, 800);
+
+        signal.addEventListener("abort",()=>{
+             clearTimeout(timeoutId);
+             reject("Save cancelled (newer save started)");
+        });
     });
 }
 
 async function saveBoard(board) {
+    if (currentSaveController) {
+        currentSaveController.abort();
+    }
+    currentSaveController = new AbortController();
+    const signal = currentSaveController.signal;
+        
     const statusEl = document.getElementById("saveStatus");
     statusEl.textContent = "Saving...";
 
