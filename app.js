@@ -3,6 +3,8 @@ function generatedId(){
      return idCounter++;
 }
 
+let currentSaveController = null;
+
 class Card {
     constructor(title, description){
         this.id = generatedId();
@@ -66,6 +68,12 @@ if(!board){
     board.addList(new List("Done"));    
 }
 
+board = reactive(board,()=>{
+    renderBoard(board, searchInput.value);
+    saveBoard(board);
+
+});
+
 function debounce(fn, delay) {
     let timer;
     return function(...args) {
@@ -107,9 +115,7 @@ function renderBoard(board, filterText = ""){
         
         fromList.removeCard(cardId);
         list.addCard(card);
-
-        saveBoard(board);
-        renderBoard(board);        
+       
         });
 
         listDiv.classList.add("list");
@@ -137,8 +143,7 @@ function renderBoard(board, filterText = ""){
             deleteButton.innerHTML = "x"   
             deleteButton.addEventListener("click",()=>{
                 list.removeCard(card.id);
-                saveBoard(board);
-                renderBoard(board);
+ 
             }); 
             cardEl.appendChild(deleteButton);   
             
@@ -149,8 +154,7 @@ function renderBoard(board, filterText = ""){
                 if (!newTitle) return;
 
                 card.rename(newTitle);
-                saveBoard(board);
-                renderBoard(board);
+
             });
             cardEl.appendChild(editBtn);            
         });
@@ -164,16 +168,14 @@ function renderBoard(board, filterText = ""){
 
         const newCard = new Card(title, "");
         list.addCard(newCard);
-        saveBoard(board);
-        renderBoard(board);
+
     });
 
     const deleteList= document.createElement("button");
     deleteList.innerHTML = "delete"   
     deleteList.addEventListener("click",()=>{
         board.removeList(list.id);
-        saveBoard(board);
-        renderBoard(board);
+
     });
 
     listDiv.appendChild(deleteList);
@@ -189,8 +191,7 @@ function renderBoard(board, filterText = ""){
 
         const newList = new List(name);
         board.addList(newList);
-        saveBoard(board);
-        renderBoard(board);        
+    
     });
     boardEl.appendChild(addList);
 }
@@ -226,7 +227,7 @@ async function saveBoard(board) {
     statusEl.textContent = "Saving...";
 
     try {
-        const message = await fakeServerSave(board);
+        const message = await fakeServerSave(board,signal);
         statusEl.textContent = message;
     } catch (error) {
         statusEl.textContent = error;
@@ -240,7 +241,6 @@ function loadBoard(){
     return reviveBoard(plainBoard);
 }
 
-renderBoard(board);
 
 
 const searchInput = document.getElementById("searchInput");
@@ -252,6 +252,28 @@ const debouncedSearch = debounce((e) => {
 searchInput.addEventListener("input", debouncedSearch);
 
 
+function reactive(target,onChange){
+    if(typeof target !== "object" || target === null){
+        return target;
+    }
+    return new Proxy(target,{
+        get(obj,key){
+            const value = obj[key];
+            if (typeof value === "object" && value !== null) {
+                return reactive(value, onChange);
+            }
+            return value;            
+        },
+
+        set(obj,key,value){
+            obj[key] = value;
+            onChange();
+            return true;            
+        }
+    });
+}
+
+
 // const card = {
 //     title: "Fix bug",
 //     show: function() {
@@ -349,3 +371,6 @@ searchInput.addEventListener("input", debouncedSearch);
 
 // console.log(c1.__proto__ === Card.prototype);
 // console.log(c2.__proto__ === CardClass.prototype);
+
+
+renderBoard(board);
