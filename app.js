@@ -1,9 +1,10 @@
+let currentSaveController = null;
+
 let idCounter = 1;
 function generatedId(){
      return idCounter++;
 }
 
-let currentSaveController = null;
 
 class Card {
     constructor(title, description){
@@ -44,6 +45,78 @@ class Board {
         this.lists = this.lists.filter(list => list.id !== listId);
     }
 }
+
+class CommandHistory {
+    constructor(){
+        this.history = [];
+        this.redoStack = [];
+    }
+
+    execute(command){
+        command.execute();
+        this.history.push(command);
+        this.redoStack = []; 
+    }
+
+    undo(){
+        const command = this.history.pop();
+        if (command) {
+            command.undo();
+            this.redoStack.push(command);
+        }          
+    }
+
+    redo(){
+        const command = this.redoStack.pop();
+        if(command){
+            command.execute();
+            this.history.push(command);
+        }
+    }
+}
+
+const commandHistory = new CommandHistory();
+
+
+function createAddCardCommand(list, card) {
+    return {
+        execute(){
+            list.addCard(card);
+        },
+        undo(){
+            list.removeCard(card.id);
+        }
+    };
+}
+
+function createDeleteCardCommand(list,card){
+    let originalIndex;
+    return{
+        execute(){
+            originalIndex = list.cards.findIndex(c => c.id === card.id);
+            list.removeCard(card.id);
+        },
+        undo() {
+            list.cards.splice(originalIndex, 0, card);
+        }
+    };
+}
+
+function createEditCardCommand(card, newTitle){
+    let oldTitle;
+    return{
+        execute(){
+            oldTitle = card.title;
+            card.rename(newTitle);
+        },
+        undo(){
+            card.rename(oldTitle);
+        }
+    };
+}
+
+
+
 
 function reviveBoard(plainBoard) {
     Object.setPrototypeOf(plainBoard, Board.prototype);
@@ -142,7 +215,8 @@ function renderBoard(board, filterText = ""){
             const deleteButton = document.createElement("button");
             deleteButton.innerHTML = "x"   
             deleteButton.addEventListener("click",()=>{
-                list.removeCard(card.id);
+                const command = createDeleteCardCommand(list, card);
+                commandHistory.execute(command);
  
             }); 
             cardEl.appendChild(deleteButton);   
@@ -153,8 +227,8 @@ function renderBoard(board, filterText = ""){
                 const newTitle = prompt("Edit title", card.title);
                 if (!newTitle) return;
 
-                card.rename(newTitle);
-
+                const command = createEditCardCommand(card, newTitle);
+                commandHistory.execute(command);
             });
             cardEl.appendChild(editBtn);            
         });
@@ -167,8 +241,8 @@ function renderBoard(board, filterText = ""){
         if(!title) return;
 
         const newCard = new Card(title, "");
-        list.addCard(newCard);
-
+        const command = createAddCardCommand(list, newCard);
+        commandHistory.execute(command);
     });
 
     const deleteList= document.createElement("button");
@@ -371,6 +445,17 @@ function reactive(target,onChange){
 
 // console.log(c1.__proto__ === Card.prototype);
 // console.log(c2.__proto__ === CardClass.prototype);
+
+document.addEventListener("keydown",(e)=>{
+    if(e.ctrlKey && e.key === "z"){
+        commandHistory.undo();
+    }
+    if (e.ctrlKey && e.key === "y") {
+        commandHistory.redo();
+    }    
+
+});
+
 
 
 renderBoard(board);
