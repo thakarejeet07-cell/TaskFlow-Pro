@@ -1,5 +1,23 @@
 let currentSaveController = null;
 
+const searchWorker = new Worker("search-worker.js");
+
+searchWorker.onmessage = function(e) {
+    const matches = e.data;
+    console.log("Worker found matches:", matches);
+};
+
+function searchWithWorker(text) {
+    const allCards = [];
+    board.lists.forEach(list => {
+        list.cards.forEach(card => {
+            allCards.push({ id: card.id, title: card.title }); // plain object, not a Card instance
+        });
+    });
+
+    searchWorker.postMessage({ cards: allCards, searchText: text });
+}
+
 let idCounter = 1;
 function generatedId(){
      return idCounter++;
