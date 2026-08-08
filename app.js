@@ -4,12 +4,15 @@ const searchWorker = new Worker("search-worker.js");
 
 searchWorker.onmessage = function(e) {
     const matches = e.data;
-    console.log("Worker found matches:", matches);
+    console.log("Matches received:", matches);
+    const matchingIds = new Set(matches.map(card => card.id));
+    console.log("matchingIds Set:", matchingIds); 
+    renderBoard(window.board,"",matchingIds);
 };
 
 function searchWithWorker(text) {
     const allCards = [];
-    board.lists.forEach(list => {
+    window.board.lists.forEach(list => {
         list.cards.forEach(card => {
             allCards.push({ id: card.id, title: card.title }); // plain object, not a Card instance
         });
@@ -18,9 +21,8 @@ function searchWithWorker(text) {
     searchWorker.postMessage({ cards: allCards, searchText: text });
 }
 
-let idCounter = 1;
 function generatedId(){
-     return idCounter++;
+    return Date.now() + Math.random().toString(36).substring(2, 9);
 }
 
 
@@ -150,20 +152,25 @@ function reviveBoard(plainBoard) {
     return plainBoard;
 }
 
-let board = loadBoard();
+async function initApp() {
+    let board = await loadBoard();
 
-if(!board){
-    board = new Board("My Project");
-    board.addList(new List("To Do"));
-    board.addList(new List("Doing"));
-    board.addList(new List("Done"));    
+    if(!board){
+        board = new Board("My Project");
+        board.addList(new List("To Do"));
+        board.addList(new List("Doing"));
+        board.addList(new List("Done"));    
+    }
+
+    window.board = reactive(board, () => {
+        renderBoard(window.board, searchInput.value);
+        saveBoard(window.board);
+    });
+
+    renderBoard(window.board);
 }
 
-board = reactive(board,()=>{
-    renderBoard(board, searchInput.value);
-    saveBoard(board);
-
-});
+initApp();
 
 function debounce(fn, delay) {
     let timer;
@@ -187,7 +194,7 @@ function debounce(fn, delay) {
 // }
 
 
-function renderBoard(board, filterText = ""){
+function renderBoard(board, filterText = "",matchingIds = null){
     const boardEl = document.getElementById("board");
     boardEl.innerHTML = "";
 
@@ -198,8 +205,8 @@ function renderBoard(board, filterText = ""){
             e.preventDefault();
         }); 
         listDiv.addEventListener("drop", (e) => {
-        const cardId = Number(e.dataTransfer.getData("cardId"));
-        const fromListId = Number(e.dataTransfer.getData("fromListId"));
+        const cardId = e.dataTransfer.getData("cardId");
+        const fromListId = e.dataTransfer.getData("fromListId");
 
         const fromList = board.lists.find(l => l.id === fromListId);
         const card = fromList.cards.find(c => c.id === cardId);
@@ -216,7 +223,7 @@ function renderBoard(board, filterText = ""){
         listDiv.appendChild(heading);
 
         list.cards.forEach(card => {
-            if(filterText && !card.title.toLowerCase().includes(filterText.toLowerCase())){
+            if(matchingIds && !matchingIds.has(card.id)){
                 return;
             }
             const cardEl = document.createElement("div");
@@ -308,37 +315,108 @@ function fakeServerSave(board,signal) {
     });
 }
 
-async function saveBoard(board) {
-    if (currentSaveController) {
-        currentSaveController.abort();
-    }
-    currentSaveController = new AbortController();
-    const signal = currentSaveController.signal;
+// async function saveBoard(board) {
+//     if (currentSaveController) {
+//         currentSaveController.abort();
+//     }
+//     currentSaveController = new AbortController();
+//     const signal = currentSaveController.signal;
         
+//     const statusEl = document.getElementById("saveStatus");
+//     statusEl.textContent = "Saving...";
+
+//     try {
+//         const message = await fakeServerSave(board,signal);
+//         statusEl.textContent = message;
+//     } catch (error) {
+//         statusEl.textContent = error;
+//     }
+// }
+
+async function saveBoard(board) {
     const statusEl = document.getElementById("saveStatus");
     statusEl.textContent = "Saving...";
 
     try {
-        const message = await fakeServerSave(board,signal);
-        statusEl.textContent = message;
+        await saveToIndexedDB(board);
+        statusEl.textContent = "Saved successfully";
     } catch (error) {
-        statusEl.textContent = error;
+        statusEl.textContent = "Save failed: " + error;
     }
 }
 
-function loadBoard(){
-    const data = localStorage.getItem('taskFlow-board');
-    if(!data) return null;
-    const plainBoard = JSON.parse(data);
+// function loadBoard(){
+//     const data = localStorage.getItem('taskFlow-board');
+//     if(!data) return null;
+//     const plainBoard = JSON.parse(data);
+//     return reviveBoard(plainBoard);
+// }
+
+async function loadBoard(){
+    const plainBoard = await loadFromIndexedDB();
+    if (!plainBoard) return null;
     return reviveBoard(plainBoard);
 }
 
+ function openDB(){
+    return new Promise((resolve,reject) => {
+        const request = indexedDB.open("taskFlowDb",1);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains("boards")) {
+                db.createObjectStore("boards", { keyPath: "id" });
+            }            
+        };
+        request.onsuccess = (event) => {
+            resolve(event.target.result);
+        };
+
+        request.onerror = (event) => {
+            reject(event.target.error);
+        };
+
+    });
+ }
+
+function saveToIndexedDB(board) {
+    return openDB().then(db => {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction("boards", "readwrite");
+            const store = tx.objectStore("boards");
+            
+            const plainBoard = JSON.parse(JSON.stringify(board));
+            plainBoard.id = "main-board";
+            
+            const request = store.put(plainBoard);
+
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    });
+}
+
+function loadFromIndexedDB() {
+    return openDB().then(db => {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction("boards", "readonly");
+            const store = tx.objectStore("boards");
+            const request = store.get("main-board");
+
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        });
+    });
+}
 
 
 const searchInput = document.getElementById("searchInput");
 const debouncedSearch = debounce((e) => {
-    // searchCards(e.target.value);
-    renderBoard(board,e.target.value);
+    const text = e.target.value;
+    if (!text) {
+        renderBoard(window.board);
+    } else {
+        searchWithWorker(text);
+    }
 }, 300);
 
 searchInput.addEventListener("input", debouncedSearch);
@@ -474,6 +552,3 @@ document.addEventListener("keydown",(e)=>{
 
 });
 
-
-
-renderBoard(board);
