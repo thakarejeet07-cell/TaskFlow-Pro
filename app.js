@@ -26,6 +26,7 @@ function generatedId(){
 }
 
 
+
 class Card {
     constructor(title, description){
         this.id = generatedId();
@@ -152,6 +153,15 @@ function reviveBoard(plainBoard) {
     return plainBoard;
 }
 
+const domObserver = new MutationObserver((mutations) => {
+    console.log(`DOM changed: ${mutations.length} mutations`);
+});
+
+domObserver.observe(document.getElementById("board"), {
+    childList: true,
+    subtree: true
+});
+
 async function initApp() {
     let board = await loadBoard();
 
@@ -182,17 +192,17 @@ function debounce(fn, delay) {
     };
 }
 
-// function searchCards(text) {
-//     const lowerText = text.toLowerCase();
-//     board.lists.forEach(list => {
-//         list.cards.forEach(card => {
-//             if (card.title.toLowerCase().includes(lowerText)) {
-//                 console.log("Match:", card.title, "in list:", list.name);
-//             }
-//         });
-//     });
-// }
-
+function observeLazyLoad(element, callback) {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                callback();
+                observer.unobserve(entry.target);
+            }
+        });
+    });
+    observer.observe(element);
+}
 
 function renderBoard(board, filterText = "",matchingIds = null){
     const boardEl = document.getElementById("board");
@@ -315,24 +325,6 @@ function fakeServerSave(board,signal) {
     });
 }
 
-// async function saveBoard(board) {
-//     if (currentSaveController) {
-//         currentSaveController.abort();
-//     }
-//     currentSaveController = new AbortController();
-//     const signal = currentSaveController.signal;
-        
-//     const statusEl = document.getElementById("saveStatus");
-//     statusEl.textContent = "Saving...";
-
-//     try {
-//         const message = await fakeServerSave(board,signal);
-//         statusEl.textContent = message;
-//     } catch (error) {
-//         statusEl.textContent = error;
-//     }
-// }
-
 async function saveBoard(board) {
     const statusEl = document.getElementById("saveStatus");
     statusEl.textContent = "Saving...";
@@ -344,13 +336,6 @@ async function saveBoard(board) {
         statusEl.textContent = "Save failed: " + error;
     }
 }
-
-// function loadBoard(){
-//     const data = localStorage.getItem('taskFlow-board');
-//     if(!data) return null;
-//     const plainBoard = JSON.parse(data);
-//     return reviveBoard(plainBoard);
-// }
 
 async function loadBoard(){
     const plainBoard = await loadFromIndexedDB();
@@ -444,103 +429,6 @@ function reactive(target,onChange){
 }
 
 
-// const card = {
-//     title: "Fix bug",
-//     show: function() {
-//         console.log(this.title);
-//     }
-// };
-
-// ❌ WRONG — passing method directly, loses "this"
-// button.addEventListener("click", card.show);
-// when clicked, "this" is undefined → logs undefined
-
-// ✅ RIGHT — wrap in arrow function, keeps "this" pointing to card
-// button.addEventListener("click", () => card.show());
-// when clicked, card.show() is called properly → logs "Fix bug"
-
-// Method - 1
-// function Card(title, description) {
-//     this.id = generatedId();
-//     this.title = title;
-//     this.description = description;
-//     this.createdAt = Date.now();
-// }
-// Card.prototype.rename = function(newTitle) {
-//     this.title = newTitle;
-// };
-// const c1 = new Card("Fix bug", "urgent");
-// c1.rename("Fix login bug");
-// console.log(c1.title); // "Fix login bug"
-
-
-// Method - 2 
-// class CardClass {
-//     constructor(title, description) {
-//         this.id = generatedId();
-//         this.title = title;
-//         this.description = description;
-//         this.createdAt = Date.now();
-//     }
-//     rename(newTitle) {
-//         this.title = newTitle;
-//     }
-// }
-// const c2 = new CardClass("Write docs", "for API");
-// c2.rename("Write API docs");
-// console.log(c2.title);
-
-// console.log(c1.__proto__ === Card.prototype);
-// console.log(c2.__proto__ === CardClass.prototype);
-
-// const card = {
-//     title: "Fix bug",
-//     show: function() {
-//         console.log(this.title);
-//     }
-// };
-
-// ❌ WRONG — passing method directly, loses "this"
-// button.addEventListener("click", card.show);
-// when clicked, "this" is undefined → logs undefined
-
-// ✅ RIGHT — wrap in arrow function, keeps "this" pointing to card
-// button.addEventListener("click", () => card.show());
-// when clicked, card.show() is called properly → logs "Fix bug"
-
-// Method - 1
-// function Card(title, description) {
-//     this.id = generatedId();
-//     this.title = title;
-//     this.description = description;
-//     this.createdAt = Date.now();
-// }
-// Card.prototype.rename = function(newTitle) {
-//     this.title = newTitle;
-// };
-// const c1 = new Card("Fix bug", "urgent");
-// c1.rename("Fix login bug");
-// console.log(c1.title); // "Fix login bug"
-
-
-// Method - 2 
-// class CardClass {
-//     constructor(title, description) {
-//         this.id = generatedId();
-//         this.title = title;
-//         this.description = description;
-//         this.createdAt = Date.now();
-//     }
-//     rename(newTitle) {
-//         this.title = newTitle;
-//     }
-// }
-// const c2 = new CardClass("Write docs", "for API");
-// c2.rename("Write API docs");
-// console.log(c2.title);
-
-// console.log(c1.__proto__ === Card.prototype);
-// console.log(c2.__proto__ === CardClass.prototype);
 
 document.addEventListener("keydown",(e)=>{
     if(e.ctrlKey && e.key === "z"){
